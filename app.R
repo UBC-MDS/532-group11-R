@@ -10,7 +10,7 @@ library(dashTable)
 
 
 
-app <- Dash$new(external_stylesheets = dbcThemes$BOOTSTRAP)
+app <- Dash$new(external_stylesheets = dbcThemes$SANDSTONE)
 
 ### Data loading and cleaning
 
@@ -29,24 +29,29 @@ app$callback(output('plot-heatmap', 'figure'),
              function(g, y) {
                filtered <- data %>%
                  filter(genres %in% g &
-                          release_year >= y[1] & release_year <= y[2])
+                          release_year >= y[1] &
+                          release_year <= y[2])
                heatmap <- ggplot(filtered) +
                  aes(x = vote_average,
                      y = genres) +
-                 #geom_bin2d(bins=11) + 
+                 #geom_bin2d(bins=11) +
                  stat_bin2d(aes(fill = after_stat(count)), binwidth = 1) +
                  coord_fixed(1) +
-                 labs(x = 'Vote Average', y = 'Genre', fill='Count') +
+                 labs(x = 'Vote Average', y = 'Genre', fill = 'Count') +
                  theme_bw() +
-                 theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank())
+                 theme(
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   panel.border = element_blank()
+                 )
                return(ggplotly(heatmap))
              })
 
 app$callback(
-  output('plot-linechart1', 'figure'),
+  output('plot-budget-year', 'figure'),
   list(input('genres', 'value'),
        input('years', 'value')),
-  profit_genre_plot <- function(g, y) {
+  plot_budget_year <- function(g, y) {
     filtered <- data %>%
       filter(genres %in% g &
                release_year >= y[1] & release_year <= y[2]) %>%
@@ -68,10 +73,10 @@ app$callback(
 
 
 app$callback(
-  output('plot-linechart2', 'figure'),
+  output('plot-profit-month', 'figure'),
   list(input('genres', 'value'),
        input('years', 'value')),
-  profit_genre_plot <- function(g, y) {
+  plot_profit_month <- function(g, y) {
     filtered <- data %>%
       filter(genres %in% g &
                release_year >= y[1] & release_year <= y[2]) %>%
@@ -115,18 +120,19 @@ app$callback(
 )
 
 
-app$callback(
-  list(
+app$callback(list(
   output('genres_drill', 'value'),
-  output('genres_drill', 'options')),
-  list(input('genres', 'value')),
-  update_genres <- function(genres) {
-    options_value <- purrr::map(genres, function(genre)
-      list(label = genre, value = genre))
-    return(list(genres[[1]], options_value))
-    }
-  )
+  output('genres_drill', 'options')
+),
+list(input('genres', 'value')),
+update_genres <- function(genres) {
+  options_value <- purrr::map(genres, function(genre)
+    list(label = genre, value = genre))
+  return(list(genres[[1]], options_value))
+})
 
+
+### BEGIN APP LAYOUT
 
 
 app$layout(dbcContainer(list(
@@ -143,12 +149,13 @@ app$layout(dbcContainer(list(
           step = 1,
           min = min(data$release_year),
           max = max(data$release_year),
+          marks=list("1960" = "1960", "2015" ="2015"),
           value = c(2000, 2016),
           tooltip = list("always_visible" = FALSE, "placement" = "top")
         )
       ),
       md = 6,
-      style = list("height"= "75px")
+      style = list("height" = "75px")
     ),
     dbcCol(
       list(
@@ -171,24 +178,30 @@ app$layout(dbcContainer(list(
   dbcRow(list(dbcCol(
     list(### FIRST ROW OF PLOTS
       dbcRow(list(
-        dbcCol(list (
-          htmlBr(),
-          htmlLabel("Identify most-liked genres", style = list("font-size" = 20)),
-          dccGraph(id='plot-heatmap')
-        ), style = list(
-          "height" = "50px"
-        )),
         dbcCol(list(
           htmlBr(),
           htmlLabel(
             "Discover historical and recent budget trends",
             style = list("font-size" = 20)
           ),
-          dccGraph(id='plot-linechart1')
+          dccGraph(id = 'plot-budget-year')
+        )),
+        dbcCol(list(
+          htmlBr(),
+          htmlLabel("Plan your release month",
+                    style = list("font-size" = 20)),
+          dccGraph(id = 'plot-profit-month')
         ))
       )),
+      htmlBr(),
       ### SECOND ROW OF PLOTS
       dbcRow(list(
+        dbcCol(list (
+          htmlBr(),
+          htmlLabel("Identify most-liked genres", style = list("font-size" = 20)),
+          dccGraph(id = 'plot-heatmap'),
+          htmlBr()
+        )),
         dbcCol(list(
           htmlBr(),
           htmlLabel("Find some potential actors",
@@ -231,13 +244,8 @@ app$layout(dbcContainer(list(
               )
             ))
           )))
-        )),
-        dbcCol(list(
-          htmlBr(),
-          htmlLabel("Plan your release month",
-                    style = list("font-size" = 20)),
-          dccGraph(id = 'plot-linechart2')
         ))
+        
       )))
   )))
 )))
