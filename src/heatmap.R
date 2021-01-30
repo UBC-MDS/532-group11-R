@@ -6,7 +6,7 @@ library(ggplot2)
 library(plotly)
 library(tidyverse)
 
-data <- read.csv("data/processed/processed_movie_data.csv")
+data <- readr::read_csv(here::here('data/processed', 'processed_movie_data.csv'))
 
 app <- Dash$new(external_stylesheets = dbcThemes$BOOTSTRAP)
 
