@@ -66,7 +66,7 @@ app$callback(
       ) +
       geom_line() +
       scale_y_continuous(labels = scales::dollar) +
-      labs(x = "Release Year", y = "Mean Budjet", color = "Genres")
+      labs(x = "Release Year", y = "Mean Budget", color = "Genres")
     ggplotly(plot)
   }
 )
