@@ -14,10 +14,10 @@ app <- Dash$new(external_stylesheets = dbcThemes$SANDSTONE)
 
 ### Data loading and cleaning
 
-set_here('/home/yazan/ubc-mds/block_4/532/532-group11-R')
-data_path <-
-  paste0(here(), '/data/processed/processed_movie_data.csv')
-data <-  read_csv(data_path)
+# data_path <-
+#   paste0(here(), '/data/processed/processed_movie_data.csv')
+# data <-  read_csv(data_path)
+data <- read_csv(here::here('data', 'processed', 'processed_movie_data.csv'))
 
 data$release_date <- as.Date(data$release_date)
 data$release_month <- month(data$release_month, label = TRUE)
