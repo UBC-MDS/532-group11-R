@@ -23,6 +23,22 @@ data$release_date <- as.Date(data$release_date)
 data$release_month <- month(data$release_month, label = TRUE)
 
 
+app$callback(output('plot-heatmap', 'figure'),
+             list(input('genres', 'value'),
+                  input('years', 'value')),
+             function(g, y) {
+               filtered <- data %>%
+                 filter(genres %in% g &
+                          release_year >= y[1] & release_year <= y[2])
+               heatmap <- ggplot(filtered) +
+                 aes(x = vote_average,
+                     y = genres) +
+                 geom_bin2d() +
+                 labs(title = 'Vote Average by Genre', x = 'Vote Average', y = 'Genre', fill='Count')
+               return(ggplotly(heatmap))
+             })
+
+
 app$callback(
   output('dcc_profit_genres_plot', 'figure'),
   list(input('genres', 'value'),
@@ -130,7 +146,8 @@ app$layout(dbcContainer(list(
       dbcRow(list(
         dbcCol(list (
           htmlBr(),
-          htmlLabel("Identify most-liked genres", style = list("font-size" = 20))
+          htmlLabel("Identify most-liked genres", style = list("font-size" = 20)),
+          dccGraph(id='plot-heatmap')
         )),
         dbcCol(list(
           htmlBr(),
