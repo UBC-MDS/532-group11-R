@@ -5,6 +5,10 @@ library(dashBootstrapComponents)
 library(tidyverse)
 library(here)
 library(plotly)
+library(lubridate)
+library(dashTable)
+
+
 
 app <- Dash$new(external_stylesheets = dbcThemes$BOOTSTRAP)
 
@@ -44,7 +48,7 @@ app$callback(
 )
 
 app$callback(
-  output('html_actor_table', 'children'),
+  output('actors_table', 'data'),
   list(
     input('genres_drill', 'value'),
     input('years', 'value'),
@@ -54,13 +58,31 @@ app$callback(
     filtered <- data %>%
       filter(genres == g &
                release_year >= y[1] & release_year <= y[2] &
-               budget_adj >= b[1] & budget_adj <= b[2])
-    return(htmlThead(htmlTr(list(
-      htmlTh("Actor"),
-      htmlTh("# of matching movies they starred in")
-    ))))
+               budget_adj >= b[1] & budget_adj <= b[2]) %>%
+      select(cast) %>%
+      mutate(actor = strsplit(cast, "\\|")) %>%
+      unnest(actor) %>%
+      group_by(actor) %>%
+      tally() %>%
+      arrange(desc(n)) %>%
+      slice(1:5)
+    return((filtered))
   }
 )
+
+
+app$callback(
+  list(
+  output('genres_drill', 'value'),
+  output('genres_drill', 'options')),
+  list(input('genres', 'value')),
+  update_genres <- function(genres) {
+    options_value <- purrr::map(genres, function(genre)
+      list(label = genre, value = genre))
+    return(list(genres[[1]], options_value))
+    }
+  )
+
 
 
 app$layout(dbcContainer(list(
@@ -152,8 +174,15 @@ app$layout(dbcContainer(list(
             htmlLabel("3. Select an actor!")
           )))),
           dbcRow(list(dbcCol(
-            list(htmlTable(children = "", id = "html_actor_table"),
-                 htmlBr())
+            list(dashDataTable(
+              id = 'actors_table',
+              columns = list(
+                list(id = 'actor',
+                     name = 'Actor'),
+                list(id = 'n',
+                     name = '# of matching movies they starred in')
+              )
+            ))
           )))
         )),
         dbcCol(list(
