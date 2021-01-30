@@ -19,18 +19,16 @@ data$release_date <- as.Date(data$release_date)
 data$release_month <- month(data$release_month, label = TRUE)
 
 
-profit_genre_data <- data %>%
-  group_by(release_month, genres) %>%
-  summarise(med_profit = median(profit))
-
-
-
 app$callback(
   output('dcc_profit_genres_plot', 'figure'),
-  list(input('genres', 'value')),
-  profit_genre_plot <- function(g) {
-    filtered <-  profit_genre_data %>% 
-      filter(genres %in% g)
+  list(input('genres', 'value'),
+       input('years', 'value')),
+  profit_genre_plot <- function(g, y) {
+    filtered <- data %>%
+      filter(genres %in% g &
+               release_year >= y[1] & release_year <= y[2]) %>%
+      group_by(release_month, genres) %>%
+      summarise(med_profit = median(profit))
     plot <- ggplot(data = filtered) +
       aes(
         x = release_month,
@@ -42,12 +40,31 @@ app$callback(
       scale_y_continuous(labels = scales::dollar) +
       labs(x = "Release Month", y = "Median Profit", color = "Genres")
     ggplotly(plot)
-  })
+  }
+)
 
-
+app$callback(
+  output('html_actor_table', 'children'),
+  list(
+    input('genres_drill', 'value'),
+    input('years', 'value'),
+    input('budget', 'value')
+  ),
+  generate_actor_table <- function(g, y, b) {
+    filtered <- data %>%
+      filter(genres == g &
+               release_year >= y[1] & release_year <= y[2] &
+               budget_adj >= b[1] & budget_adj <= b[2])
+    return(htmlThead(htmlTr(list(
+      htmlTh("Actor"),
+      htmlTh("# of matching movies they starred in")
+    ))))
+  }
+)
 
 
 app$layout(dbcContainer(list(
+  htmlBr(),
   htmlH1("Movie Production Planner"),
   htmlBr(),
   dbcRow(list(
@@ -58,9 +75,10 @@ app$layout(dbcContainer(list(
           id = "years",
           count = 1,
           step = 1,
-          min = 1960,
-          max = 2015,
+          min = min(data$release_year),
+          max = max(data$release_year),
           value = c(2000, 2016),
+          tooltip = list("always_visible" = FALSE, "placement" = "top")
         )
       ),
       md = 6,
@@ -72,11 +90,9 @@ app$layout(dbcContainer(list(
         htmlLabel("Genres"),
         dccDropdown(
           id = 'genres',
-          options = list(
-            list(label = "Action", value = "Action"),
-            list(label = "Comedy", value = "Comedy")
-          ),
-          value = list('Action'),
+          options = purrr::map(unique(data$genres), function(genre)
+            list(label = genre, value = genre)),
+          value = list('Action', 'Drama', 'Adventure', 'Family', 'Animation'),
           multi = TRUE
         )
       ),
@@ -102,12 +118,43 @@ app$layout(dbcContainer(list(
           )
         ))
       )),
-      #### SECOND ROW OF PLOTS
+      ### SECOND ROW OF PLOTS
       dbcRow(list(
         dbcCol(list(
           htmlBr(),
           htmlLabel("Find some potential actors",
-                    style = list("font-size" = 20))
+                    style = list("font-size" = 20)),
+          dbcRow(list(dbcCol(
+            list(
+              htmlLabel("1. Drill down on a specific genre"),
+              dccDropdown(
+                id = "genres_drill",
+                multi = FALSE,
+                style = list("width" = "200px")
+              )
+            )
+          ))),
+          dbcRow(list(dbcCol(
+            list(
+              htmlLabel("2. Narrow down your budget"),
+              dccRangeSlider(
+                id = "budget",
+                count = 1,
+                step = 1,
+                min = min(data$budget_adj),
+                max = max(data$budget_adj),
+                value = list(0, 425000000),
+                tooltip = list("always_visible" = FALSE, "placement" = "top")
+              )
+            )
+          ))),
+          dbcRow(list(dbcCol(list(
+            htmlLabel("3. Select an actor!")
+          )))),
+          dbcRow(list(dbcCol(
+            list(htmlTable(children = "", id = "html_actor_table"),
+                 htmlBr())
+          )))
         )),
         dbcCol(list(
           htmlBr(),
