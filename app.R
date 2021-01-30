@@ -252,4 +252,4 @@ app$layout(dbcContainer(list(
 
 
 
-app$run_server(debug = T)
+app$run_server(host = '0.0.0.0')
