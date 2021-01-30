@@ -11,25 +11,41 @@ app <- Dash$new(external_stylesheets = dbcThemes$BOOTSTRAP)
 ### Data loading and cleaning
 
 set_here('/home/yazan/ubc-mds/block_4/532/532-group11-R')
-data_path <- paste0(here(), '/data/processed/processed_movie_data.csv')
+data_path <-
+  paste0(here(), '/data/processed/processed_movie_data.csv')
 data <-  read_csv(data_path)
 
 data$release_date <- as.Date(data$release_date)
 data$release_month <- month(data$release_month, label = TRUE)
 
 
-profit_genre_data <- data %>% 
-  group_by(release_month, genres) %>% 
+profit_genre_data <- data %>%
+  group_by(release_month, genres) %>%
   summarise(med_profit = median(profit))
 
-proft_genre_plot <- ggplot(data = profit_genre_data) +
-  aes(x = release_month,
-      y = med_profit,
-      group = genres,
-      color = genres) +
-  geom_line() +
-  scale_y_continuous(labels = scales::dollar) +
-  labs(x = "Release Month", y = "Median Profit", color = "Genres")
+
+
+app$callback(
+  output('dcc_profit_genres_plot', 'figure'),
+  list(input('genres', 'value')),
+  profit_genre_plot <- function(g) {
+    filtered <-  profit_genre_data %>% 
+      filter(genres %in% g)
+    plot <- ggplot(data = filtered) +
+      aes(
+        x = release_month,
+        y = med_profit,
+        group = genres,
+        color = genres
+      ) +
+      geom_line() +
+      scale_y_continuous(labels = scales::dollar) +
+      labs(x = "Release Month", y = "Median Profit", color = "Genres")
+    ggplotly(plot)
+  })
+
+
+
 
 app$layout(dbcContainer(list(
   htmlH1("Movie Production Planner"),
@@ -57,11 +73,10 @@ app$layout(dbcContainer(list(
         dccDropdown(
           id = 'genres',
           options = list(
-            list(label = "New York City", value = "NYC"),
-            list(label = "Montreal", value = "MTL"),
-            list(label = "San Francisco", value = "SF")
+            list(label = "Action", value = "Action"),
+            list(label = "Comedy", value = "Comedy")
           ),
-          value = list('NYC', 'MTL'),
+          value = list('Action'),
           multi = TRUE
         )
       ),
@@ -73,7 +88,7 @@ app$layout(dbcContainer(list(
   htmlBr(),
   ## MAIN PLOTS AREA
   dbcRow(list(dbcCol(
-    list(## FIRST ROW OF PLOTS
+    list(### FIRST ROW OF PLOTS
       dbcRow(list(
         dbcCol(list (
           htmlBr(),
@@ -87,6 +102,7 @@ app$layout(dbcContainer(list(
           )
         ))
       )),
+      #### SECOND ROW OF PLOTS
       dbcRow(list(
         dbcCol(list(
           htmlBr(),
@@ -97,7 +113,7 @@ app$layout(dbcContainer(list(
           htmlBr(),
           htmlLabel("Plan your release month",
                     style = list("font-size" = 20)),
-          dccGraph(figure=ggplotly(proft_genre_plot))
+          dccGraph(id = 'dcc_profit_genres_plot')
         ))
       )))
   )))
