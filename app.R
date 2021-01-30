@@ -33,14 +33,42 @@ app$callback(output('plot-heatmap', 'figure'),
                heatmap <- ggplot(filtered) +
                  aes(x = vote_average,
                      y = genres) +
-                 geom_bin2d() +
-                 labs(title = 'Vote Average by Genre', x = 'Vote Average', y = 'Genre', fill='Count')
+                 #geom_bin2d(bins=11) + 
+                 stat_bin2d(aes(fill = after_stat(count)), binwidth = 1) +
+                 coord_fixed(1) +
+                 labs(x = 'Vote Average', y = 'Genre', fill='Count') +
+                 theme_bw() +
+                 theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank())
                return(ggplotly(heatmap))
              })
 
+app$callback(
+  output('plot-linechart1', 'figure'),
+  list(input('genres', 'value'),
+       input('years', 'value')),
+  profit_genre_plot <- function(g, y) {
+    filtered <- data %>%
+      filter(genres %in% g &
+               release_year >= y[1] & release_year <= y[2]) %>%
+      group_by(release_year, genres) %>%
+      summarise(mean_budget = mean(budget_adj))
+    plot <- ggplot(data = filtered) +
+      aes(
+        x = release_year,
+        y = mean_budget,
+        group = genres,
+        color = genres
+      ) +
+      geom_line() +
+      scale_y_continuous(labels = scales::dollar) +
+      labs(x = "Release Year", y = "Mean Budjet", color = "Genres")
+    ggplotly(plot)
+  }
+)
+
 
 app$callback(
-  output('dcc_profit_genres_plot', 'figure'),
+  output('plot-linechart2', 'figure'),
   list(input('genres', 'value'),
        input('years', 'value')),
   profit_genre_plot <- function(g, y) {
@@ -120,8 +148,7 @@ app$layout(dbcContainer(list(
         )
       ),
       md = 6,
-      style = list("border" = "0px",
-                   "border-radius" = "10px")
+      style = list("height"= "75px")
     ),
     dbcCol(
       list(
@@ -148,13 +175,16 @@ app$layout(dbcContainer(list(
           htmlBr(),
           htmlLabel("Identify most-liked genres", style = list("font-size" = 20)),
           dccGraph(id='plot-heatmap')
+        ), style = list(
+          "height" = "50px"
         )),
         dbcCol(list(
           htmlBr(),
           htmlLabel(
             "Discover historical and recent budget trends",
             style = list("font-size" = 20)
-          )
+          ),
+          dccGraph(id='plot-linechart1')
         ))
       )),
       ### SECOND ROW OF PLOTS
@@ -206,7 +236,7 @@ app$layout(dbcContainer(list(
           htmlBr(),
           htmlLabel("Plan your release month",
                     style = list("font-size" = 20)),
-          dccGraph(id = 'dcc_profit_genres_plot')
+          dccGraph(id = 'plot-linechart2')
         ))
       )))
   )))
